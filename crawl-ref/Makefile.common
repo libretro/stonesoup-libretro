@@ -1,0 +1,34 @@
+INCFLAGS := -I$(CORE_DIR)/source/rltiles -I$(CORE_DIR)/source/contrib/lua/src -I$(CORE_DIR)/source/contrib/pcre -I$(CORE_DIR)/source -I$(CORE_DIR)/source/contrib/libpng -I$(CORE_DIR)/source/contrib/zlib -I$(CORE_DIR)/source/contrib/freetype/include -I$(CORE_DIR)/source/contrib/sqlite
+
+## Build object list
+CCSOURCES   += $(wildcard $(CORE_DIR)/source/*.cc) $(wildcard $(CORE_DIR)/source/rltiles/*cc) $(wildcard $(CORE_DIR)/source/prebuilt/*cc) \
+               $(wildcard $(CORE_DIR)/libretro/*cc)
+CCBLACKLIST += $(CORE_DIR)/source/tileweb-text.cc $(CORE_DIR)/source/libunix.cc
+SOURCES_CXX     += $(filter-out $(CCBLACKLIST), $(CCSOURCES))
+
+LUASOURCES  += $(wildcard $(CORE_DIR)/source/contrib/lua/src/*.c)
+LUABLACK    += $(CORE_DIR)/source/contrib/lua/src/lua.c $(CORE_DIR)/source/contrib/lua/src/luac.c
+SOURCES_C   += $(filter-out $(LUABLACK), $(LUASOURCES))
+
+SQLSOURCES  += $(wildcard $(CORE_DIR)/source/contrib/sqlite/*.c)
+SQLBLACK    += $(CORE_DIR)/source/contrib/sqlite/shell.c
+SOURCES_C    += $(filter-out $(SQLBLACK), $(SQLSOURCES))
+
+ZIPSOURCES  += $(wildcard $(CORE_DIR)/source/contrib/zlib/*.c)
+ZIPBLACK    += $(CORE_DIR)/source/contrib/zlib/example.c $(CORE_DIR)/source/contrib/zlib/minigzip.c
+SOURCES_C    += $(filter-out $(ZIPBLACK), $(ZIPSOURCES))
+
+PNGSOURCES  += $(wildcard $(CORE_DIR)/source/contrib/libpng/*.c)
+PNGBLACK    += 
+SOURCES_C    += $(filter-out $(PNGBLACK), $(PNGSOURCES))
+
+SOURCES_C   += $(CORE_DIR)/source/contrib/freetype/src/autofit/autofit.c \
+               $(CORE_DIR)/source/contrib/freetype/src/base/ftbase.c \
+               $(CORE_DIR)/source/contrib/freetype/src/base/ftinit.c \
+               $(CORE_DIR)/source/contrib/freetype/src/base/ftsystem.c \
+               $(CORE_DIR)/source/contrib/freetype/src/sfnt/sfnt.c \
+               $(CORE_DIR)/source/contrib/freetype/src/smooth/smooth.c \
+               $(CORE_DIR)/source/contrib/freetype/src/truetype/truetype.c
+
+SOURCES_C   += $(CORE_DIR)/libretro/libco/libco.c
+

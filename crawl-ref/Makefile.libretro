@@ -17,22 +17,25 @@ endif
 
 TARGET_NAME := stonesoup
 
+COMMONFLAGS :=
+
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
 	fpic := -fPIC
-   CPPFLAGS += -msse -msse2 -DUNIX -DUSE_FB
+   COMMONFLAGS += -msse -msse2 -DUNIX -DUSE_FB
 	LDFLAGS += -lpthread
    LDFLAGS += -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
 	fpic := -fPIC
-   CPPFLAGS += -DUNIX -DUSE_RETROGL -DDARWIN_NO_CARBON 
+   COMMONFLAGS += -DUNIX -DUSE_RETROGL -DDARWIN_NO_CARBON 
    CXXFLAGS += -stdlib=libc++
    LDFLAGS += -dynamiclib -stdlib=libc++ -framework OpenGL
 else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
 	fpic := -fPIC
-   CPPFLAGS += -marm -DUNIX -stdlib=libc++ -DHAVE_POSIX_MEMALIGN -DUSE_RETROGL -DGLES
+	COMMONFLAGS += -marm -DUNIX -DHAVE_POSIX_MEMALIGN -DUSE_RETROGL -DGLES
+   CPPFLAGS += -stdlib=libc++ 
    LDFLAGS += -dynamiclib -marm -stdlib=libc++ -framework OpenGLES
    CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
    CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0   
@@ -40,69 +43,43 @@ else ifneq (,$(findstring win,$(platform)))
    CC = gcc
    CXX = g++
    TARGET := $(TARGET_NAME)_libretro.dll
-   CPPFLAGS += -msse -msse2   
+   COMMONFLAGS += -msse -msse2   
    LDFLAGS += -shared -static-libgcc -static-libstdc++ -Wl,--version-script=libretro/link.T -lwinmm -lgdi32
 endif
 
-## Build object list
-CCSOURCES   += $(wildcard source/*.cc) $(wildcard source/rltiles/*cc) $(wildcard source/prebuilt/*cc) \
-               $(wildcard libretro/*cc)
-CCBLACKLIST += source/tileweb-text.cc source/libunix.cc
-CCFINAL     += $(filter-out $(CCBLACKLIST), $(CCSOURCES))
-OBJECTS     += $(CCFINAL:.cc=.o)
-OBJECTS     += libretro/libco/libco.o
+SOURCES_C   :=
+SOURCES_CXX :=
 
-LUASOURCES  += $(wildcard source/contrib/lua/src/*.c)
-LUABLACK    += source/contrib/lua/src/lua.c source/contrib/lua/src/luac.c
-LUAFINAL    += $(filter-out $(LUABLACK), $(LUASOURCES))
-OBJECTS     += $(LUAFINAL:.c=.o)
+CORE_DIR    := .
 
-SQLSOURCES  += $(wildcard source/contrib/sqlite/*.c)
-SQLBLACK    += source/contrib/sqlite/shell.c
-SQLFINAL    += $(filter-out $(SQLBLACK), $(SQLSOURCES))
-OBJECTS     += $(SQLFINAL:.c=.o)
+include Makefile.common
 
-ZIPSOURCES  += $(wildcard source/contrib/zlib/*.c)
-ZIPBLACK    += source/contrib/zlib/example.c source/contrib/zlib/minigzip.c
-ZIPFINAL    += $(filter-out $(ZIPBLACK), $(ZIPSOURCES))
-OBJECTS     += $(ZIPFINAL:.c=.o)
+OBJECTS     += $(SOURCES_C:.c=.o) $(SOURCES_CXX:.cc=.o)
 
-PNGSOURCES  += $(wildcard source/contrib/libpng/*.c)
-PNGBLACK    += 
-PNGFINAL    += $(filter-out $(PNGBLACK), $(PNGSOURCES))
-OBJECTS     += $(PNGFINAL:.c=.o)
-
-
-FTSOURCES   += source/contrib/freetype/src/autofit/autofit.c \
-               source/contrib/freetype/src/base/ftbase.c \
-               source/contrib/freetype/src/base/ftinit.c \
-               source/contrib/freetype/src/base/ftsystem.c \
-               source/contrib/freetype/src/sfnt/sfnt.c \
-               source/contrib/freetype/src/smooth/smooth.c \
-               source/contrib/freetype/src/truetype/truetype.c
-OBJECTS     += $(FTSOURCES:.c=.o)
-CPPFLAGS    += -DFT2_BUILD_LIBRARY -DHAVE_FDATASYNC
+COMMONFLAGS += -DFT2_BUILD_LIBRARY -DHAVE_FDATASYNC -D__LIBRETRO__ -DSQLITE_OMIT_LOAD_EXTENSION -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FT $(fpic) -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
 
 # Build flags
-CPPFLAGS += -Isource/rltiles -Isource/contrib/lua/src -Isource/contrib/pcre -Isource
-CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib -Isource/contrib/freetype/include
-CPPFLAGS += -Isource/contrib/sqlite
-CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FT $(fpic)
-CPPFLAGS += -D__LIBRETRO__ -DSQLITE_OMIT_LOAD_EXTENSION
-CPPFLAGS += -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
 CXXFLAGS += -std=c++11
+
+CPPFLAGS +=  $(COMMONFLAGS) $(INCFLAGS)
+CFLAGS   +=  $(COMMONFLAGS) $(INCFLAGS)
 
 # Rules
 ifeq ($(DEBUG), 1)
    CPPFLAGS += -O0 -g
+   CFLAGS += -O0 -g
 else
    CPPFLAGS += -O3 -DNDEBUG
+   CFLAGS += -O3 -DNDEBUG
 endif
 
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
 	$(CXX) $(fpic) -o $@ $(OBJECTS) $(LDFLAGS)
+
+%.o: %.c
+	$(CC) $(INCFLAGS) $(CFLAGS) -c -o $@ $<
 
 generate:
 	cd source && ./util/gen-mst.pl
