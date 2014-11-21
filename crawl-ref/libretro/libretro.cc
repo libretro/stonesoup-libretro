@@ -5,8 +5,12 @@
 
 #include "../source/AppHdr.h"
 #include "windowmanager-retro.h"
+#ifdef USE_FB
 #include "glwrapper-fb.h"
+#endif
+#ifdef USE_RETROGL
 #include "glwrapper-retrogl.h"
+#endif
 
 static void retro_log_printf_default(enum retro_log_level level, const char *fmt, ...);
 extern int ss_main(int argc, char* argv[]);
@@ -25,19 +29,26 @@ static cothread_t game_thread;
 static char rc_path[PATH_MAX];
 
 extern WindowManager *wm;
+#if defined(USE_RETROGL)
 extern GLStateManager *glmanager;
+#endif
+#if defined(USE_FB)
+static FBStateManager *fbmanager;
+#endif
 
 static RetroWrapper *retrowm;
 
 static bool have_frame;
 
-#ifdef USE_FB
+#if defined(USE_FB)
 #define RETROGLSTATEMANAGER FBStateManager
 static RETROGLSTATEMANAGER *retromanager;
-#else
+#elif defined(USE_RETROGL)
 #define RETROGLSTATEMANAGER RetroGLStateManager
 static RETROGLSTATEMANAGER *retromanager;
+#endif
 
+#if defined(USE_RETROGL)
 static struct retro_hw_render_callback render_iface;
 
 static void core_gl_context_reset()
@@ -45,7 +56,6 @@ static void core_gl_context_reset()
     if (retromanager)
         retromanager->context_reset();
 }
-
 #endif
 
 // 
@@ -145,7 +155,11 @@ static void keyboard_event(bool down, unsigned keycode, uint32_t character, uint
 void main_wrap()
 {
     static char content_dir[PATH_MAX];
+#ifdef HAVE_STRLCPY
     strlcpy(content_dir, rc_path, PATH_MAX);
+#else
+    strcpy(content_dir, rc_path);
+#endif
 
     char* slash = strrchr(content_dir, '/');
     if (slash) slash[1] = '\0';
@@ -238,7 +252,7 @@ bool retro_load_game(const struct retro_game_info *game)
         return false;
 
 // TODO: Fallback to FB if RetroGL fails.
-#ifndef USE_FB
+#if !defined(USE_FB) && defined(USE_RETROGL)
     memset(&render_iface, 0, sizeof(render_iface));
 #ifndef GLES
     render_iface.context_type = RETRO_HW_CONTEXT_OPENGL;
@@ -257,16 +271,26 @@ bool retro_load_game(const struct retro_game_info *game)
     }
 #endif
 
+#ifdef HAVE_STRLCPY
     strlcpy(rc_path, game->path, PATH_MAX);
+#else
+    strcpy(rc_path, game->path);
+#endif
 
     main_thread = co_active();
     game_thread = co_create(65536 * sizeof(void*) * 16, main_wrap);
 
+#if defined(USE_RETROGL)
     WindowManager::create();
     GLStateManager::init();
     
     retrowm = (RetroWrapper*)wm;
     retromanager = (RETROGLSTATEMANAGER*)glmanager;
+#endif
+#ifdef USE_FB    
+   retrowm = wm ? (RetroWrapper*)wm : 0;
+   fbmanager = glmanager ? (FBStateManager*)glmanager : 0;
+#endif
     
     return true;
 }
@@ -279,6 +303,7 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
+
     poll_cb();
     process_touches();
     
@@ -290,7 +315,7 @@ void retro_run (void)
                  retromanager->m_height, 1024 * 4);
     else
         video_cb(0, 1024, 768, 1024 * 4);
-#else
+#elif defined(USE_RETROGL)
     retromanager->enter_frame(render_iface.get_current_framebuffer());
     co_switch(game_thread);
     retromanager->exit_frame();

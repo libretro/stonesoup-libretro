@@ -162,7 +162,7 @@ void FBStateManager::load_texture(unsigned char *pixels, unsigned int width,
                                    int xoffset, int yoffset)
 {
     if (m_texture)
-        m_texture->load_pixels((unsigned int*)pixels,
+        m_texture->load_pixels(pixels,
                                 width, height, xoffset, yoffset);
 
 }

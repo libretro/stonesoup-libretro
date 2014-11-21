@@ -19,17 +19,21 @@ TARGET_NAME := stonesoup
 
 ifneq (,$(findstring unix,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.so
-   CPPFLAGS += -msse -msse2 -DUNIX
+	fpic := -fPIC
+   CPPFLAGS += -msse -msse2 -DUNIX -DUSE_FB
+	LDFLAGS += -lpthread
    LDFLAGS += -shared -Wl,--version-script=libretro/link.T -Wl,--no-undefined
 else ifneq (,$(findstring osx,$(platform)))
    TARGET := $(TARGET_NAME)_libretro.dylib
-   CPPFLAGS += -DUNIX -DUSE_RETROGL
+	fpic := -fPIC
+   CPPFLAGS += -DUNIX -DUSE_RETROGL -DDARWIN_NO_CARBON 
    CXXFLAGS += -stdlib=libc++
    LDFLAGS += -dynamiclib -stdlib=libc++ -framework OpenGL
 else ifneq (,$(findstring ios,$(platform)))
    TARGET := $(TARGET_NAME)_libretro_ios.dylib
-   CPPFLAGS += -marm -DUNIX -stdlib=libc++ -DHAVE_POSIX_MEMALIGN -fPIC -DUSE_RETROGL -DGLES
-   LDFLAGS += -dynamiclib -marm -stdlib=libc++ -fPIC -framework OpenGLES
+	fpic := -fPIC
+   CPPFLAGS += -marm -DUNIX -stdlib=libc++ -DHAVE_POSIX_MEMALIGN -DUSE_RETROGL -DGLES
+   LDFLAGS += -dynamiclib -marm -stdlib=libc++ -framework OpenGLES
    CC = clang -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0
    CXX = clang++ -arch armv7 -isysroot $(IOSSDK) -miphoneos-version-min=5.0   
 else ifneq (,$(findstring win,$(platform)))
@@ -77,14 +81,14 @@ FTSOURCES   += source/contrib/freetype/src/autofit/autofit.c \
                source/contrib/freetype/src/smooth/smooth.c \
                source/contrib/freetype/src/truetype/truetype.c
 OBJECTS     += $(FTSOURCES:.c=.o)
-CPPFLAGS    += -DFT2_BUILD_LIBRARY -DDARWIN_NO_CARBON
+CPPFLAGS    += -DFT2_BUILD_LIBRARY -DHAVE_FDATASYNC
 
 # Build flags
 CPPFLAGS += -Isource/rltiles -Isource/contrib/lua/src -Isource/contrib/pcre -Isource
 CPPFLAGS += -Isource/contrib/libpng -Isource/contrib/zlib -Isource/contrib/freetype/include
 CPPFLAGS += -Isource/contrib/sqlite
-CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FT
-CPPFLAGS += -D__LIBRETRO__
+CPPFLAGS += -DUSE_TILE -DUSE_TILE_LOCAL -DWIZARD -DUSE_FT $(fpic)
+CPPFLAGS += -D__LIBRETRO__ -DSQLITE_OMIT_LOAD_EXTENSION
 CPPFLAGS += -DPROPORTIONAL_FONT=\"DejaVuSans.ttf\" -DMONOSPACED_FONT=\"DejaVuSansMono.ttf\"
 CXXFLAGS += -std=c++11
 
@@ -98,7 +102,7 @@ endif
 all: $(TARGET)
 
 $(TARGET): $(OBJECTS)
-	$(CXX) -o $@ $(OBJECTS) $(LDFLAGS)
+	$(CXX) $(fpic) -o $@ $(OBJECTS) $(LDFLAGS)
 
 generate:
 	cd source && ./util/gen-mst.pl
