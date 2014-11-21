@@ -303,6 +303,10 @@ void retro_unload_game(void)
 
 void retro_run (void)
 {
+#ifdef USE_FB    
+   retrowm = wm ? (RetroWrapper*)wm : 0;
+   fbmanager = glmanager ? (FBStateManager*)glmanager : 0;
+#endif
 
     poll_cb();
     process_touches();
@@ -310,9 +314,8 @@ void retro_run (void)
 #ifdef USE_FB    
     co_switch(game_thread);
     
-    if (retromanager->m_pixels)
-        video_cb(have_frame ? retromanager->m_pixels : 0, retromanager->m_width,
-                 retromanager->m_height, 1024 * 4);
+    if (fbmanager && fbmanager->m_pixels)
+       video_cb(have_frame ? fbmanager->m_pixels : 0, fbmanager->m_width, fbmanager->m_height, 1024 * 4);
     else
         video_cb(0, 1024, 768, 1024 * 4);
 #elif defined(USE_RETROGL)
