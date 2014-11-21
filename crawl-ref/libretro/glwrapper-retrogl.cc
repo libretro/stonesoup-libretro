@@ -4,6 +4,7 @@
 #if defined(USE_RETROGL)
 
 #include "glwrapper-retrogl.h"
+#include "windowmanager-retro.h"
 #include "options.h"
 
 #ifdef __APPLE__
@@ -85,7 +86,7 @@ RetroGLStateManager::RetroGLStateManager()
 void RetroGLStateManager::enter_frame(unsigned int fb)
 {
     glBindFramebuffer(GL_FRAMEBUFFER, fb);
-    glViewport(0, 0, 1024, 768);
+    glViewport(0, 0, SS_WIDTH, SS_HEIGHT);
     glUseProgram(gl_program);
 }
 

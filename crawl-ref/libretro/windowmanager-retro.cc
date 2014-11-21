@@ -17,6 +17,7 @@
 WindowManager *wm = NULL;
 extern void retro_return(bool flip);
 
+
 static int _translate_keysym(enum retro_key sym, enum retro_mod mods, uint32_t unicode)
 {
     // This function returns the key that was hit.  Returning zero implies that
@@ -164,24 +165,23 @@ static int _translate_keysym(enum retro_key sym, enum retro_mod mods, uint32_t u
 
 void WindowManager::create()
 {
-    if (wm)
-        return;
-
-    wm = new RetroWrapper();
+    if (!wm)
+       wm = new RetroWrapper();
 }
 
 void WindowManager::shutdown()
 {
-    delete wm;
+   if (wm)
+      delete wm;
     wm = NULL;
 }
 
 RetroWrapper::RetroWrapper()                              { }
 RetroWrapper::~RetroWrapper()                             { }
-int RetroWrapper::screen_width() const                    { return 1024; }
-int RetroWrapper::screen_height() const                   { return 768;  }
-int RetroWrapper::desktop_width() const                   { return 1024; }
-int RetroWrapper::desktop_height() const                  { return 768;  }
+int RetroWrapper::screen_width() const                    { return SS_WIDTH; }
+int RetroWrapper::screen_height() const                   { return SS_HEIGHT;  }
+int RetroWrapper::desktop_width() const                   { return SS_WIDTH; }
+int RetroWrapper::desktop_height() const                  { return SS_HEIGHT;  }
 void RetroWrapper::set_window_title(const char *title)    { }
 bool RetroWrapper::set_window_icon(const char* icon_name) { return true; }
 void RetroWrapper::set_mod_state(key_mod mod)             { /* (EMPTY) Functionality not needed */ }
@@ -189,8 +189,8 @@ void RetroWrapper::delay(unsigned int ms)                 { /* (EMPTY) Never cal
 
 int RetroWrapper::init(coord_def *m_windowsz)
 {
-    m_windowsz->x = 1024;
-    m_windowsz->y = 768;
+    m_windowsz->x = SS_WIDTH;
+    m_windowsz->y = SS_HEIGHT;
 
 /*
     if (Options.tile_key_repeat_delay > 0)
@@ -276,9 +276,7 @@ struct ImageBuf
         rows(new unsigned int*[height])
     {
         for (unsigned int i = 0; i != height; i ++)
-        {
             rows[i] = pixels + (i * width);
-        }
     }
     
     ~ImageBuf()
@@ -357,12 +355,14 @@ bool RetroWrapper::load_texture(GenericTexture *tex, const char *filename,
 void RetroWrapper::push_mouse_movement(int x, int y)
 {
     wm_event event;
+
     event.type = WME_MOUSEMOTION;    
     event.mouse_event.held   = MouseEvent::NONE;
     event.mouse_event.event  = MouseEvent::MOVE;
     event.mouse_event.button = MouseEvent::NONE;
     event.mouse_event.px     = x;
     event.mouse_event.py     = y;
+
     queue.push_back(event);
 }
 
@@ -390,12 +390,14 @@ void RetroWrapper::push_mouse_button(unsigned int button, bool state,
 void RetroWrapper::push_key(bool down, enum retro_key keycode, enum retro_mod mods, uint32_t unicode)
 {
     wm_event event;
+
     event.type = down ? WME_KEYDOWN : WME_KEYUP;
     event.key.state = down;
     event.key.keysym.scancode = 0; // < Unused
     event.key.keysym.key_mod = (key_mod)0;
     event.key.keysym.unicode = 0; // < Unused
     event.key.keysym.sym = _translate_keysym(keycode, mods, unicode);
+
     queue.push_back(event);
 }
 

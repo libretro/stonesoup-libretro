@@ -82,8 +82,8 @@ struct touch_detail
         x = input_cb(0, RETRO_DEVICE_POINTER, index, RETRO_DEVICE_ID_POINTER_X) + 32768;
         y = input_cb(0, RETRO_DEVICE_POINTER, index, RETRO_DEVICE_ID_POINTER_Y) + 32768;
         
-        x = (x * 1024) >> 16;
-        y = (y * 768 ) >> 16;
+        x = (x * SS_WIDTH) >> 16;
+        y = (y * SS_HEIGHT ) >> 16;
     }
     
     operator void*() { return pressed ? this : 0; }
@@ -212,10 +212,10 @@ void retro_get_system_info(struct retro_system_info *info)
 void retro_get_system_av_info(struct retro_system_av_info *info)
 {
    memset(info, 0, sizeof(*info));
-   info->geometry.base_width = 1024;
-   info->geometry.base_height = 768;
-   info->geometry.max_width = 1024;
-   info->geometry.max_height = 768;
+   info->geometry.base_width   = SS_WIDTH;
+   info->geometry.base_height  = SS_HEIGHT;
+   info->geometry.max_width    = SS_WIDTH;
+   info->geometry.max_height   = SS_HEIGHT;
    info->geometry.aspect_ratio = 0.0;
    info->timing.fps = 60;
    info->timing.sample_rate = 44100.0;
@@ -315,14 +315,14 @@ void retro_run (void)
     co_switch(game_thread);
     
     if (fbmanager && fbmanager->m_pixels)
-       video_cb(have_frame ? fbmanager->m_pixels : 0, fbmanager->m_width, fbmanager->m_height, 1024 * 4);
+       video_cb(have_frame ? fbmanager->m_pixels : 0, fbmanager->m_width, fbmanager->m_height, SS_WIDTH * 4);
     else
-        video_cb(0, 1024, 768, 1024 * 4);
+        video_cb(0, SS_WIDTH, SS_HEIGHT, SS_WIDTH * 4);
 #elif defined(USE_RETROGL)
     retromanager->enter_frame(render_iface.get_current_framebuffer());
     co_switch(game_thread);
     retromanager->exit_frame();
-    video_cb(have_frame ? RETRO_HW_FRAME_BUFFER_VALID : 0, 1024, 768, 0);
+    video_cb(have_frame ? RETRO_HW_FRAME_BUFFER_VALID : 0, SS_WIDTH, SS_HEIGHT, 0);
 #endif
 }
 

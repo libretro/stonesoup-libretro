@@ -8,6 +8,9 @@
 
 #include "windowmanager.h"
 
+#define SS_WIDTH 1024
+#define SS_HEIGHT 768
+
 class RetroWrapper : public WindowManager
 {
 public:
